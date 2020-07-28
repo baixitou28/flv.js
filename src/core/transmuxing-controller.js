@@ -126,7 +126,7 @@ class TransmuxingController {
         this._currentSegmentIndex = segmentIndex;
         let dataSource = this._mediaDataSource.segments[segmentIndex];
 
-        let ioctl = this._ioctl = new IOController(dataSource, this._config, segmentIndex);//重点
+        let ioctl = this._ioctl = new IOController(dataSource, this._config, segmentIndex);//tiger 重点 入口函数 
         ioctl.onError = this._onIOException.bind(this);
         ioctl.onSeeked = this._onIOSeeked.bind(this);
         ioctl.onComplete = this._onIOComplete.bind(this);
