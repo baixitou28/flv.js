@@ -35,7 +35,7 @@ import TransmuxingEvents from './transmuxing-events.js';
    }
  */
 
-let TransmuxingWorker = function (self) {
+let TransmuxingWorker = function (self) {//重新封装TransmuxingController，以后可以实现自己的类，日志等。原理理解还是看TransmuxingController
 
     let TAG = 'TransmuxingWorker';
     let controller = null;
@@ -43,7 +43,7 @@ let TransmuxingWorker = function (self) {
 
     Polyfill.install();
 
-    self.addEventListener('message', function (e) {
+    self.addEventListener('message', function (e) {//加进去命令直接处理，只是实现了代理功能
         switch (e.data.cmd) {
             case 'init':
                 controller = new TransmuxingController(e.data.param[0], e.data.param[1]);
@@ -66,7 +66,7 @@ let TransmuxingWorker = function (self) {
                 }
                 self.postMessage({msg: 'destroyed'});
                 break;
-            case 'start':
+            case 'start'://tiger 让controller 来做
                 controller.start();
                 break;
             case 'stop':

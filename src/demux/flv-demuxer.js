@@ -42,10 +42,10 @@ function ReadBig32(array, index) {
             (array[index + 3]));
 }
 
-
+//网络：flv.js项目的代码有一定规模，如果要研究的话，我建议从demux入手，理解了demux就掌握了媒体数据处理的关键步骤，前面的媒体数据下载和后面的媒体数据播放就变得容易理解了
 class FLVDemuxer {
 
-    constructor(probeData, config) {
+    constructor(probeData, config) {//各种初始化
         this.TAG = 'FLVDemuxer';
 
         this._config = config;
@@ -89,7 +89,7 @@ class FLVDemuxer {
             fps_den: 1000
         };
 
-        this._flvSoundRateTable = [5500, 11025, 22050, 44100, 48000];
+        this._flvSoundRateTable = [5500, 11025, 22050, 44100, 48000];//flv声音只支持这么多？
 
         this._mpegSamplingRates = [
             96000, 88200, 64000, 48000, 44100, 32000,
@@ -129,25 +129,25 @@ class FLVDemuxer {
         this._onTrackMetadata = null;
         this._onDataAvailable = null;
     }
-
+    //参看video_file_format_spec_v10.pdf the FLV header,解析flv文件头
     static probe(buffer) {
         let data = new Uint8Array(buffer);
         let mismatch = {match: false};
-
-        if (data[0] !== 0x46 || data[1] !== 0x4C || data[2] !== 0x56 || data[3] !== 0x01) {
-            return mismatch;
+        //参看video_file_format_spec_v10.pdf the FLV header// 0x46 0x4c 0x56 这几个数字其实就是 'F' 'L' 'V' 的ascii码，表示flv文件头，后面的0x01是flv格式的版本号，用这来检测数据是不是 flv 格式
+        if (data[0] !== 0x46 || data[1] !== 0x4C || data[2] !== 0x56 || data[3] !== 0x01) {//参看 https://zhuanlan.zhihu.com/p/24429290
+            return mismatch;//参看ffmpeg rtmp_open:  rt->flv_size = 13;memcpy(rt->flv_data, "FLV\1\0\0\0\0\011\0\0\0\0", rt->flv_size);
         }
-
-        let hasAudio = ((data[4] & 4) >>> 2) !== 0;
-        let hasVideo = (data[4] & 1) !== 0;
-
+        //取出第五个字节，它的第六 和 第八 bit 分别表示是否存在 音频和视频数据，其它位是保留位可以忽略。
+        let hasAudio = ((data[4] & 4) >>> 2) !== 0;//tiger ffmpeg rt->flv_data[4] |= FLV_HEADER_FLAG_HASAUDIO;
+        let hasVideo = (data[4] & 1) !== 0;//tiger ffmpeg rt->flv_data[4] |= FLV_HEADER_FLAG_HASVIDEO;
+        //
         let offset = ReadBig32(data, 5);
 
-        if (offset < 9) {
+        if (offset < 9) {//tiger 9是如何算出来的？
             return mismatch;
         }
 
-        return {
+        return {//返回类似RTMPContext的头
             match: true,
             consumed: offset,
             dataOffset: offset,
@@ -273,18 +273,18 @@ class FLVDemuxer {
         let offset = 0;
         let le = this._littleEndian;
 
-        if (byteStart === 0) {  // buffer with FLV header
-            if (chunk.byteLength > 13) {
-                let probeData = FLVDemuxer.probe(chunk);
+        if (byteStart === 0) {  // buffer with FLV header//直接读取文件的最开始
+            if (chunk.byteLength > 13) {//这个probe是被 parseChunks 调用的，当读取了至少13个字节后，就判断下是否是一个flv数据，然后再继续后面的分析。
+                let probeData = FLVDemuxer.probe(chunk);//为什么是13，因为flv的文件头就是13个字节，参考 上面 PDF里的 “The FLV header”，这13个字节包括了后面的一个四字节的size，这个size表示前一个tag的大小，但是由于第一个tag是不存在前一个的，所以第一个size总是 0。
                 offset = probeData.dataOffset;
             } else {
                 return 0;
             }
         }
-
+        //参看video_file_format_spec_v10.pdf the FLV file body ，FLV tags， 
         if (this._firstParse) {  // handle PreviousTagSize0 before Tag1
             this._firstParse = false;
-            if (byteStart + offset !== this._dataOffset) {
+            if (byteStart + offset !== this._dataOffset) {//这个不是肯定一样的？
                 Log.w(this.TAG, 'First time parsing but chunk byteStart invalid!');
             }
 
@@ -296,53 +296,53 @@ class FLVDemuxer {
             offset += 4;
         }
 
-        while (offset < chunk.byteLength) {
+        while (offset < chunk.byteLength) {//不停读
             this._dispatch = true;
 
             let v = new DataView(chunk, offset);
 
-            if (offset + 11 + 4 > chunk.byteLength) {
+            if (offset + 11 + 4 > chunk.byteLength) {//11 的取值参见协议6.1.1. Message Header或者 ffmpeg #define RTMP_HEADER 
                 // data not enough for parsing an flv tag
                 break;
             }
-
-            let tagType = v.getUint8(0);
-            let dataSize = v.getUint32(0, !le) & 0x00FFFFFF;
+            //6.1.1. Message Header rtmp_specification_1.0.pdf //参看video_file_format_spec_v10.pdf the FLV file body ，FLV tags，
+            let tagType = v.getUint8(0);//tiger Message Type(1 byte) 
+            let dataSize = v.getUint32(0, !le) & 0x00FFFFFF;//tiger Payload length (3 bytes)
 
             if (offset + 11 + dataSize + 4 > chunk.byteLength) {
                 // data not enough for parsing actual data body
                 break;
             }
-
-            if (tagType !== 8 && tagType !== 9 && tagType !== 18) {
+            //parseChunks 后面的代码就是在不断解析 tag，flv把一段媒体数据称为 TAG，每个tag有不同的type，
+            if (tagType !== 8 && tagType !== 9 && tagType !== 18) {//实际上真正用到的只有三种type，8、9、18 分别对应，音频、视频和Script Data。
                 Log.w(this.TAG, `Unsupported tag type ${tagType}, skipped`);
                 // consume the whole tag (skip it)
-                offset += 11 + dataSize + 4;
+                offset += 11 + dataSize + 4;//注意看 那个 数字 11，因为tag header是11个字节，后面就是tag body了，所以offset加上这些偏移是为了跳到下一个tag的位置。
                 continue;
             }
-
+            //你看是不是正好 11 个字节，adobe为了节约流量，能用24bit表示的绝不用32bit，但是还是给timestamp设置了一个 扩展位存放最高位的字节，
             let ts2 = v.getUint8(4);
             let ts1 = v.getUint8(5);
             let ts0 = v.getUint8(6);
-            let ts3 = v.getUint8(7);
-
+            let ts3 = v.getUint8(7);//这个设计很蛋疼，于是导致了下面这段奇葩代码，先取三个字节按照Big-Endian转换成整数再在高位放上第四个字节。
+            //6.1.1. Message Header
             let timestamp = ts0 | (ts1 << 8) | (ts2 << 16) | (ts3 << 24);
 
-            let streamId = v.getUint32(7, !le) & 0x00FFFFFF;
+            let streamId = v.getUint32(7, !le) & 0x00FFFFFF;//TIGER Stream ID(3 bytes)
             if (streamId !== 0) {
                 Log.w(this.TAG, 'Meet tag which has StreamID != 0!');
             }
 
             let dataOffset = offset + 11;
-
-            switch (tagType) {
-                case 8:  // Audio
+            //7.1. Types of Messages
+            switch (tagType) {//解析完了 tag header后面分别按照不同的 tag type调用不同的解析函数。
+                case 8:  // Audio //标准7.1.4   或者参看ffmpeg rtmpproto.c的get_packet
                     this._parseAudioData(chunk, dataOffset, dataSize, timestamp);
                     break;
-                case 9:  // Video
+                case 9:  // Video //标准7.1.5
                     this._parseVideoData(chunk, dataOffset, dataSize, timestamp, byteStart + offset);
                     break;
-                case 18:  // ScriptDataObject
+                case 18:  // ScriptDataObject  //标准7.1.2
                     this._parseScriptData(chunk, dataOffset, dataSize);
                     break;
             }
@@ -364,8 +364,8 @@ class FLVDemuxer {
 
         return offset;  // consumed bytes, just equals latest offset index
     }
-
-    _parseScriptData(arrayBuffer, dataOffset, dataSize) {
+    //TIGER 一般解析一次就够了
+    _parseScriptData(arrayBuffer, dataOffset, dataSize) {//这是一种类似二进制json的对象描述数据格式，JavaScript比较惨只能自己写实现，其它平台可以用 librtmp的代码去做。
         let scriptData = AMF.parseScriptData(arrayBuffer, dataOffset, dataSize);
 
         if (scriptData.hasOwnProperty('onMetaData')) {
@@ -472,7 +472,7 @@ class FLVDemuxer {
             Log.w(this.TAG, 'Flv: Invalid audio packet, missing SoundData payload!');
             return;
         }
-
+        //
         if (this._hasAudioFlagOverrided === true && this._hasAudio === false) {
             // If hasAudio: false indicated explicitly in MediaDataSource,
             // Ignore all the audio packets
@@ -483,13 +483,13 @@ class FLVDemuxer {
         let v = new DataView(arrayBuffer, dataOffset, dataSize);
 
         let soundSpec = v.getUint8(0);
-
+        //编码限制
         let soundFormat = soundSpec >>> 4;
         if (soundFormat !== 2 && soundFormat !== 10) {  // MP3 or AAC
             this._onError(DemuxErrors.CODEC_UNSUPPORTED, 'Flv: Unsupported audio codec idx: ' + soundFormat);
             return;
         }
-
+        //声音的采样率
         let soundRate = 0;
         let soundRateIndex = (soundSpec & 12) >>> 2;
         if (soundRateIndex >= 0 && soundRateIndex <= 4) {
@@ -571,7 +571,7 @@ class FLVDemuxer {
             } else if (aacData.packetType === 1) {  // AAC raw frame data
                 let dts = this._timestampBase + tagTimestamp;
                 let aacSample = {unit: aacData.data, length: aacData.data.byteLength, dts: dts, pts: dts};
-                track.samples.push(aacSample);
+                track.samples.push(aacSample);//推送
                 track.length += aacData.data.length;
             } else {
                 Log.e(this.TAG, `Flv: Unsupported AAC data type ${aacData.packetType}`);
@@ -643,7 +643,7 @@ class FLVDemuxer {
         return result;
     }
 
-    _parseAACAudioSpecificConfig(arrayBuffer, dataOffset, dataSize) {
+    _parseAACAudioSpecificConfig(arrayBuffer, dataOffset, dataSize) {//解析AAC config，尽量用he-aac
         let array = new Uint8Array(arrayBuffer, dataOffset, dataSize);
         let config = null;
 
@@ -831,7 +831,7 @@ class FLVDemuxer {
             // Ignore all the video packets
             return;
         }
-
+        //首位：
         let spec = (new Uint8Array(arrayBuffer, dataOffset, dataSize))[0];
 
         let frameType = (spec & 240) >>> 4;
@@ -853,11 +853,11 @@ class FLVDemuxer {
 
         let le = this._littleEndian;
         let v = new DataView(arrayBuffer, dataOffset, dataSize);
-
+        //01.
         let packetType = v.getUint8(0);
         let cts_unsigned = v.getUint32(0, !le) & 0x00FFFFFF;
         let cts = (cts_unsigned << 8) >> 8;  // convert to 24-bit signed int
-
+        //02.
         if (packetType === 0) {  // AVCDecoderConfigurationRecord
             this._parseAVCDecoderConfigurationRecord(arrayBuffer, dataOffset + 4, dataSize - 4);
         } else if (packetType === 1) {  // One or more Nalus
@@ -879,22 +879,22 @@ class FLVDemuxer {
         let meta = this._videoMetadata;
         let track = this._videoTrack;
         let le = this._littleEndian;
-        let v = new DataView(arrayBuffer, dataOffset, dataSize);
+        let v = new DataView(arrayBuffer, dataOffset, dataSize);//meta信息放入DataView结构
 
-        if (!meta) {
+        if (!meta) {//如果没有则更新meta
             if (this._hasVideo === false && this._hasVideoFlagOverrided === false) {
                 this._hasVideo = true;
                 this._mediaInfo.hasVideo = true;
             }
 
-            meta = this._videoMetadata = {};
+            meta = this._videoMetadata = {};//初始化
             meta.type = 'video';
             meta.id = track.id;
-            meta.timescale = this._timescale;
+            meta.timescale = this._timescale;//使用用户配置
             meta.duration = this._duration;
-        } else {
+        } else {//如果已经存在，则告警
             if (typeof meta.avcc !== 'undefined') {
-                Log.w(this.TAG, 'Found another AVCDecoderConfigurationRecord!');
+                Log.w(this.TAG, 'Found another AVCDecoderConfigurationRecord!');//tiger 连续发送sps，pps，会出现这个告警，但为什么会导致1.刷新时钟不能归零 2.播放1个小时左右，异常终止
             }
         }
 
@@ -908,7 +908,7 @@ class FLVDemuxer {
             return;
         }
 
-        this._naluLengthSize = (v.getUint8(4) & 3) + 1;  // lengthSizeMinusOne
+        this._naluLengthSize = (v.getUint8(4) & 3) + 1;  // lengthSizeMinusOne //
         if (this._naluLengthSize !== 3 && this._naluLengthSize !== 4) {  // holy shit!!!
             this._onError(DemuxErrors.FORMAT_ERROR, `Flv: Strange NaluLengthSizeMinusOne: ${this._naluLengthSize - 1}`);
             return;
@@ -936,13 +936,13 @@ class FLVDemuxer {
             let sps = new Uint8Array(arrayBuffer, dataOffset + offset, len);
             offset += len;
 
-            let config = SPSParser.parseSPS(sps);
+            let config = SPSParser.parseSPS(sps);//解析sps
             if (i !== 0) {
                 // ignore other sps's config
                 continue;
             }
 
-            meta.codecWidth = config.codec_size.width;
+            meta.codecWidth = config.codec_size.width;//sps放入meta
             meta.codecHeight = config.codec_size.height;
             meta.presentWidth = config.present_size.width;
             meta.presentHeight = config.present_size.height;
@@ -965,7 +965,7 @@ class FLVDemuxer {
             meta.refSampleDuration = meta.timescale * (fps_den / fps_num);
 
             let codecArray = sps.subarray(1, 4);
-            let codecString = 'avc1.';
+            let codecString = 'avc1.';//出现avc1.42e01e avc1.64081e  mp4a.40.2   mp4a.40.5
             for (let j = 0; j < 3; j++) {
                 let h = codecArray[j].toString(16);
                 if (h.length < 2) {
@@ -995,7 +995,7 @@ class FLVDemuxer {
                 mi.mimeType = 'video/x-flv; codecs="' + mi.videoCodec + '"';
             }
             if (mi.isComplete()) {
-                this._onMediaInfo(mi);
+                this._onMediaInfo(mi);//参看transmuxing-controller.js 的_onMediaInfo
             }
         }
 

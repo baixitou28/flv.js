@@ -30,7 +30,7 @@ class Transmuxer {
         this.TAG = 'Transmuxer';
         this._emitter = new EventEmitter();
 
-        if (config.enableWorker && typeof (Worker) !== 'undefined') {
+        if (config.enableWorker && typeof (Worker) !== 'undefined') {//是否用自定义的TransmuxingWorker来完成
             try {
                 let work = require('webworkify');
                 this._worker = work(TransmuxingWorker);
@@ -48,7 +48,7 @@ class Transmuxer {
                 this._controller = new TransmuxingController(mediaDataSource, config);
             }
         } else {
-            this._controller = new TransmuxingController(mediaDataSource, config);
+            this._controller = new TransmuxingController(mediaDataSource, config);//直接用TransmuxingController
         }
 
         if (this._controller) {

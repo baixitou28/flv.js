@@ -18,7 +18,7 @@
 
 import ExpGolomb from './exp-golomb.js';
 
-class SPSParser {
+class SPSParser {//sps½âÎö
 
     static _ebsp2rbsp(uint8array) {
         let src = uint8array;

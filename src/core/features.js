@@ -23,8 +23,8 @@ class Features {
 
     static supportMSEH264Playback() {
         return window.MediaSource &&
-               window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
-    }
+            window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');//第一段，'avc1.42E01E'，即它用于告诉浏览器关于视频编解码的一些重要信息，诸如编码方式、分辨率、帧率、码率以及对解码器解码能力的要求
+    }//更多说明 https://zhuanlan.zhihu.com/p/26374202
 
     static supportNetworkStreamIO() {
         let ioctl = new IOController({}, createDefaultConfig());

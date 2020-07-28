@@ -37,7 +37,7 @@ class MSEController {
             this._config.autoCleanupSourceBuffer = true;
         }
 
-        this.e = {
+        this.e = {//tiger 应用可以重点关注这几个事件
             onSourceOpen: this._onSourceOpen.bind(this),
             onSourceEnded: this._onSourceEnded.bind(this),
             onSourceClose: this._onSourceClose.bind(this),
@@ -97,7 +97,7 @@ class MSEController {
     }
 
     attachMediaElement(mediaElement) {
-        if (this._mediaSource) {
+        if (this._mediaSource) {//已创建
             throw new IllegalStateException('MediaSource has been attached to an HTMLMediaElement!');
         }
         let ms = this._mediaSource = new window.MediaSource();
@@ -105,8 +105,8 @@ class MSEController {
         ms.addEventListener('sourceended', this.e.onSourceEnded);
         ms.addEventListener('sourceclose', this.e.onSourceClose);
 
-        this._mediaElement = mediaElement;
-        this._mediaSourceObjectURL = window.URL.createObjectURL(this._mediaSource);
+        this._mediaElement = mediaElement;//参考：https://developer.mozilla.org/en-US/docs/Web/API/URL/createObjectURL
+        this._mediaSourceObjectURL = window.URL.createObjectURL(this._mediaSource);//TIGER createObjectURL用法不理解
         mediaElement.src = this._mediaSourceObjectURL;
     }
 

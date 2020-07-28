@@ -50,14 +50,14 @@ class MediaInfo {
     }
 
     isComplete() {
-        let audioInfoComplete = (this.hasAudio === false) ||
-                                (this.hasAudio === true &&
+        let audioInfoComplete = (this.hasAudio === false) ||//没有音频
+                                (this.hasAudio === true &&//或者音频参数都全了
                                  this.audioCodec != null &&
                                  this.audioSampleRate != null &&
                                  this.audioChannelCount != null);
 
-        let videoInfoComplete = (this.hasVideo === false) ||
-                                (this.hasVideo === true &&
+        let videoInfoComplete = (this.hasVideo === false) ||//没有视频
+                                (this.hasVideo === true &&//或者视频参数都全了
                                  this.videoCodec != null &&
                                  this.width != null &&
                                  this.height != null &&
@@ -88,7 +88,7 @@ class MediaInfo {
         }
 
         let table = this.keyframesIndex;
-        let keyframeIdx = this._search(table.times, milliseconds);
+        let keyframeIdx = this._search(table.times, milliseconds);//相邻的毫秒里面找
 
         return {
             index: keyframeIdx,

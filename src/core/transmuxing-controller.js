@@ -46,7 +46,7 @@ class TransmuxingController {
         }
 
         // fill in default IO params if not exists
-        if (typeof mediaDataSource.cors !== 'boolean') {
+        if (typeof mediaDataSource.cors !== 'boolean') {//tiger 专门有一个markdown文件描述
             mediaDataSource.cors = true;
         }
         if (typeof mediaDataSource.withCredentials !== 'boolean') {
@@ -57,7 +57,7 @@ class TransmuxingController {
         this._currentSegmentIndex = 0;
         let totalDuration = 0;
 
-        this._mediaDataSource.segments.forEach((segment) => {
+        this._mediaDataSource.segments.forEach((segment) => {//多段视频
             // timestampBase for each segment, and calculate total duration
             segment.timestampBase = totalDuration;
             totalDuration += segment.duration;
@@ -109,7 +109,7 @@ class TransmuxingController {
         this._emitter = null;
     }
 
-    on(event, listener) {
+    on(event, listener) {//加入
         this._emitter.addListener(event, listener);
     }
 
@@ -117,16 +117,16 @@ class TransmuxingController {
         this._emitter.removeListener(event, listener);
     }
 
-    start() {
+    start() {//开始某段视频播放
         this._loadSegment(0);
         this._enableStatisticsReporter();
     }
 
-    _loadSegment(segmentIndex, optionalFrom) {
+    _loadSegment(segmentIndex, optionalFrom) {//加载
         this._currentSegmentIndex = segmentIndex;
         let dataSource = this._mediaDataSource.segments[segmentIndex];
 
-        let ioctl = this._ioctl = new IOController(dataSource, this._config, segmentIndex);
+        let ioctl = this._ioctl = new IOController(dataSource, this._config, segmentIndex);//重点
         ioctl.onError = this._onIOException.bind(this);
         ioctl.onSeeked = this._onIOSeeked.bind(this);
         ioctl.onComplete = this._onIOComplete.bind(this);
@@ -134,12 +134,12 @@ class TransmuxingController {
         ioctl.onRecoveredEarlyEof = this._onIORecoveredEarlyEof.bind(this);
 
         if (optionalFrom) {
-            this._demuxer.bindDataSource(this._ioctl);
+            this._demuxer.bindDataSource(this._ioctl);//maybe如果是从某个实时流打开，绑定输入源
         } else {
             ioctl.onDataArrival = this._onInitChunkArrival.bind(this);
         }
 
-        ioctl.open(optionalFrom);
+        ioctl.open(optionalFrom);//打开
     }
 
     stop() {
@@ -147,7 +147,7 @@ class TransmuxingController {
         this._disableStatisticsReporter();
     }
 
-    _internalAbort() {
+    _internalAbort() {//释放
         if (this._ioctl) {
             this._ioctl.destroy();
             this._ioctl = null;
@@ -241,7 +241,7 @@ class TransmuxingController {
             this._demuxer.bindDataSource(this._ioctl);
             this._demuxer.timestampBase = this._mediaDataSource.segments[this._currentSegmentIndex].timestampBase;
 
-            consumed = this._demuxer.parseChunks(data, byteStart);
+            consumed = this._demuxer.parseChunks(data, byteStart);//重要
         } else if ((probeData = FLVDemuxer.probe(data)).match) {
             // Always create new FLVDemuxer
             this._demuxer = new FLVDemuxer(probeData, this._config);
@@ -275,7 +275,7 @@ class TransmuxingController {
             this._remuxer.onInitSegment = this._onRemuxerInitSegmentArrival.bind(this);
             this._remuxer.onMediaSegment = this._onRemuxerMediaSegmentArrival.bind(this);
 
-            consumed = this._demuxer.parseChunks(data, byteStart);
+            consumed = this._demuxer.parseChunks(data, byteStart);//重要
         } else {
             probeData = null;
             Log.e(this.TAG, 'Non-FLV, Unsupported media type!');
@@ -291,7 +291,7 @@ class TransmuxingController {
     }
 
     _onMediaInfo(mediaInfo) {
-        if (this._mediaInfo == null) {
+        if (this._mediaInfo == null) {//垫背
             // Store first segment's mediainfo as global mediaInfo
             this._mediaInfo = Object.assign({}, mediaInfo);
             this._mediaInfo.keyframesIndex = null;
@@ -301,13 +301,13 @@ class TransmuxingController {
         }
 
         let segmentInfo = Object.assign({}, mediaInfo);
-        Object.setPrototypeOf(segmentInfo, MediaInfo.prototype);
+        Object.setPrototypeOf(segmentInfo, MediaInfo.prototype);//使用新的成员函数
         this._mediaInfo.segments[this._currentSegmentIndex] = segmentInfo;
 
         // notify mediaInfo update
         this._reportSegmentMediaInfo(this._currentSegmentIndex);
 
-        if (this._pendingSeekTime != null) {
+        if (this._pendingSeekTime != null) {//要跳转
             Promise.resolve().then(() => {
                 let target = this._pendingSeekTime;
                 this._pendingSeekTime = null;
@@ -335,8 +335,8 @@ class TransmuxingController {
         if (nextSegmentIndex < this._mediaDataSource.segments.length) {
             this._internalAbort();
             this._remuxer.flushStashedSamples();
-            this._loadSegment(nextSegmentIndex);
-        } else {
+            this._loadSegment(nextSegmentIndex);//是否加载下一段
+        } else {//否则停止
             this._remuxer.flushStashedSamples();
             this._emitter.emit(TransmuxingEvents.LOADING_COMPLETE);
             this._disableStatisticsReporter();
