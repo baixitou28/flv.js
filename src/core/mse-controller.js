@@ -37,7 +37,7 @@ class MSEController {
             this._config.autoCleanupSourceBuffer = true;
         }
 
-        this.e = {//tiger 应用可以重点关注这几个事件
+        this.e = {//初始化：tiger 应用可以重点关注这几个事件
             onSourceOpen: this._onSourceOpen.bind(this),
             onSourceEnded: this._onSourceEnded.bind(this),
             onSourceClose: this._onSourceClose.bind(this),
@@ -96,12 +96,12 @@ class MSEController {
         this._emitter.removeListener(event, listener);
     }
 
-    attachMediaElement(mediaElement) {
+    attachMediaElement(mediaElement) {//主要入口，创建浏览器的播放器，注册相关的事件处理函数
         if (this._mediaSource) {//已创建
             throw new IllegalStateException('MediaSource has been attached to an HTMLMediaElement!');
         }
-        let ms = this._mediaSource = new window.MediaSource();
-        ms.addEventListener('sourceopen', this.e.onSourceOpen);
+        let ms = this._mediaSource = new window.MediaSource();//MediaSource 对象可以附着在HTMLMediaElement在客户端进行播放 参考 https://developer.mozilla.org/zh-CN/docs/Web/API/MediaSource
+        ms.addEventListener('sourceopen', this.e.onSourceOpen);//打开时，调用this._onSourceOpen
         ms.addEventListener('sourceended', this.e.onSourceEnded);
         ms.addEventListener('sourceclose', this.e.onSourceClose);
 
@@ -442,7 +442,7 @@ class MSEController {
                 }
 
                 try {
-                    this._sourceBuffers[type].appendBuffer(segment.data);//不同类型type，放入新的数据
+                    this._sourceBuffers[type].appendBuffer(segment.data);//不同类型type，放入新的数据到_sourceBuffers
                     this._isBufferFull = false;
                     if (type === 'video' && segment.hasOwnProperty('info')) {
                         this._idrList.appendArray(segment.info.syncPoints);//
@@ -488,7 +488,7 @@ class MSEController {
         if (this._hasPendingSegments()) {
             this._doAppendSegments();
         }
-        this._emitter.emit(MSEEvents.SOURCE_OPEN);
+        this._emitter.emit(MSEEvents.SOURCE_OPEN);//TIGER MSEEvents.SOURCE_OPEN
     }
 
     _onSourceEnded() {
