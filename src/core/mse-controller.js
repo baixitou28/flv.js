@@ -165,7 +165,7 @@ class MSEController {
         }
     }
 
-    appendInitSegment(initSegment, deferred) {
+    appendInitSegment(initSegment, deferred) {//TIGER 创建_mediaSource.addSourceBuffer，并和mediaSource关联了
         if (!this._mediaSource || this._mediaSource.readyState !== 'open') {//01.MediaSource 还未创建，数据暂存在_pendingSourceBufferInit
             // sourcebuffer creation requires mediaSource.readyState === 'open'
             // so we defer the sourcebuffer creation, until sourceopen event triggered
@@ -411,21 +411,21 @@ class MSEController {
         }
     }
 
-    _doAppendSegments() {
+    _doAppendSegments() {//如果source buffer状态ok，加入this._sourceBuffers[type].appendBuffer
         let pendingSegments = this._pendingSegments;
 
-        for (let type in pendingSegments) {
+        for (let type in pendingSegments) {//一次取音频和视频的segment
             if (!this._sourceBuffers[type] || this._sourceBuffers[type].updating) {
                 continue;
             }
 
             if (pendingSegments[type].length > 0) {
-                let segment = pendingSegments[type].shift();
+                let segment = pendingSegments[type].shift();//取一段
 
                 if (segment.timestampOffset) {
                     // For MPEG audio stream in MSE, if unbuffered-seeking occurred
                     // We need explicitly set timestampOffset to the desired point in timeline for mpeg SourceBuffer.
-                    let currentOffset = this._sourceBuffers[type].timestampOffset;
+                    let currentOffset = this._sourceBuffers[type].timestampOffset;//正常情况下，是以当前片段的时间为最小值
                     let targetOffset = segment.timestampOffset / 1000;  // in seconds
 
                     let delta = Math.abs(currentOffset - targetOffset);
@@ -433,7 +433,7 @@ class MSEController {
                         Log.v(this.TAG, `Update MPEG audio timestampOffset from ${currentOffset} to ${targetOffset}`);
                         this._sourceBuffers[type].timestampOffset = targetOffset;
                     }
-                    delete segment.timestampOffset;
+                    delete segment.timestampOffset;//不理解
                 }
 
                 if (!segment.data || segment.data.byteLength === 0) {
@@ -441,14 +441,14 @@ class MSEController {
                     continue;
                 }
 
-                try {
-                    this._sourceBuffers[type].appendBuffer(segment.data);//不同类型type，放入新的数据到_sourceBuffers
+                try {//tiger 参看手册 https://developer.mozilla.org/zh-CN/docs/Web/API/SourceBuffer
+                    this._sourceBuffers[type].appendBuffer(segment.data);//不同类型type，放入新的数据到MediaSource 的source buffer里
                     this._isBufferFull = false;
                     if (type === 'video' && segment.hasOwnProperty('info')) {
                         this._idrList.appendArray(segment.info.syncPoints);//
                     }
                 } catch (error) {
-                    this._pendingSegments[type].unshift(segment);
+                    this._pendingSegments[type].unshift(segment);//重做数据
                     if (error.code === 22) {  // QuotaExceededError
                         /* Notice that FireFox may not throw QuotaExceededError if SourceBuffer is full
                          * Currently we can only do lazy-load to avoid SourceBuffer become scattered.
