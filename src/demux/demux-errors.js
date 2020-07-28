@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-const DemuxErrors = {//消息类型
+const DemuxErrors = {//Demux消息类型
     OK: 'OK',
     FORMAT_ERROR: 'FormatError',
     FORMAT_UNSUPPORTED: 'FormatUnsupported',

@@ -19,7 +19,7 @@
 import {IllegalStateException, InvalidArgumentException} from '../utils/exception.js';
 
 // Exponential-Golomb buffer decoder
-class ExpGolomb {
+class ExpGolomb {//GolombµÄ½âÎö
 
     constructor(uint8array) {
         this.TAG = 'ExpGolomb';

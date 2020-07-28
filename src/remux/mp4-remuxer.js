@@ -81,8 +81,8 @@ class MP4Remuxer {
     }
 
     bindDataSource(producer) {
-        producer.onDataAvailable = this.remux.bind(this);
-        producer.onTrackMetadata = this._onTrackMetadataReceived.bind(this);
+        producer.onDataAvailable = this.remux.bind(this);//绑定onDataAvailable的处理
+        producer.onTrackMetadata = this._onTrackMetadataReceived.bind(this);//绑定onTrackMetadata的处理
         return this;
     }
 
@@ -129,15 +129,15 @@ class MP4Remuxer {
         this._audioSegmentInfoList.clear();
     }
 
-    remux(audioTrack, videoTrack) {
+    remux(audioTrack, videoTrack) {//数据入口函数
         if (!this._onMediaSegment) {
             throw new IllegalStateException('MP4Remuxer: onMediaSegment callback must be specificed!');
         }
         if (!this._dtsBaseInited) {
             this._calculateDtsBase(audioTrack, videoTrack);
         }
-        this._remuxVideo(videoTrack);
-        this._remuxAudio(audioTrack);
+        this._remuxVideo(videoTrack);//处理视频
+        this._remuxAudio(audioTrack);//处理音频
     }
 
     _onTrackMetadataReceived(type, metadata) {

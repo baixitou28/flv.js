@@ -43,7 +43,7 @@ function ReadBig32(array, index) {
 }
 
 //网络：flv.js项目的代码有一定规模，如果要研究的话，我建议从demux入手，理解了demux就掌握了媒体数据处理的关键步骤，前面的媒体数据下载和后面的媒体数据播放就变得容易理解了
-class FLVDemuxer {
+class FLVDemuxer {//flv解码
 
     constructor(probeData, config) {//各种初始化
         this.TAG = 'FLVDemuxer';
@@ -104,7 +104,7 @@ class FLVDemuxer {
         this._mpegAudioL2BitRateTable = [0, 32, 48, 56,  64,  80,  96, 112, 128, 160, 192, 224, 256, 320, 384, -1];
         this._mpegAudioL3BitRateTable = [0, 32, 40, 48,  56,  64,  80,  96, 112, 128, 160, 192, 224, 256, 320, -1];
 
-        this._videoTrack = {type: 'video', id: 1, sequenceNumber: 0, samples: [], length: 0};
+        this._videoTrack = {type: 'video', id: 1, sequenceNumber: 0, samples: [], length: 0};//解析后的视频
         this._audioTrack = {type: 'audio', id: 2, sequenceNumber: 0, samples: [], length: 0};
 
         this._littleEndian = (function () {
@@ -130,7 +130,7 @@ class FLVDemuxer {
         this._onDataAvailable = null;
     }
     //参看video_file_format_spec_v10.pdf the FLV header,解析flv文件头
-    static probe(buffer) {
+    static probe(buffer) {//解析文件头，返回解析好的数据
         let data = new Uint8Array(buffer);
         let mismatch = {match: false};
         //参看video_file_format_spec_v10.pdf the FLV header// 0x46 0x4c 0x56 这几个数字其实就是 'F' 'L' 'V' 的ascii码，表示flv文件头，后面的0x01是flv格式的版本号，用这来检测数据是不是 flv 格式
@@ -265,14 +265,14 @@ class FLVDemuxer {
     }
 
     // function parseChunks(chunk: ArrayBuffer, byteStart: number): number;
-    parseChunks(chunk, byteStart) {
+    parseChunks(chunk, byteStart) {//理解flv.js最重要的函数
         if (!this._onError || !this._onMediaInfo || !this._onTrackMetadata || !this._onDataAvailable) {
             throw new IllegalStateException('Flv: onError & onMediaInfo & onTrackMetadata & onDataAvailable callback must be specified');
         }
 
         let offset = 0;
         let le = this._littleEndian;
-
+        //01.
         if (byteStart === 0) {  // buffer with FLV header//直接读取文件的最开始
             if (chunk.byteLength > 13) {//这个probe是被 parseChunks 调用的，当读取了至少13个字节后，就判断下是否是一个flv数据，然后再继续后面的分析。
                 let probeData = FLVDemuxer.probe(chunk);//为什么是13，因为flv的文件头就是13个字节，参考 上面 PDF里的 “The FLV header”，这13个字节包括了后面的一个四字节的size，这个size表示前一个tag的大小，但是由于第一个tag是不存在前一个的，所以第一个size总是 0。
@@ -281,7 +281,7 @@ class FLVDemuxer {
                 return 0;
             }
         }
-        //参看video_file_format_spec_v10.pdf the FLV file body ，FLV tags， 
+        //02.参看video_file_format_spec_v10.pdf the FLV file body ，FLV tags， 
         if (this._firstParse) {  // handle PreviousTagSize0 before Tag1
             this._firstParse = false;
             if (byteStart + offset !== this._dataOffset) {//这个不是肯定一样的？
@@ -296,7 +296,7 @@ class FLVDemuxer {
             offset += 4;
         }
 
-        while (offset < chunk.byteLength) {//不停读
+        while (offset < chunk.byteLength) {//03.不停解析
             this._dispatch = true;
 
             let v = new DataView(chunk, offset);
@@ -354,7 +354,7 @@ class FLVDemuxer {
 
             offset += 11 + dataSize + 4;  // tagBody + dataSize + prevTagSize
         }
-
+        //05.解析好的数据_audioTrack，_videoTrack通过事件，发送出去
         // dispatch parsed frames to consumer (typically, the remuxer)
         if (this._isInitialMetadataDispatched()) {
             if (this._dispatch && (this._audioTrack.length || this._videoTrack.length)) {
@@ -1072,7 +1072,7 @@ class FLVDemuxer {
 
             let data = new Uint8Array(arrayBuffer, dataOffset + offset, lengthSize + naluSize);
             let unit = {type: unitType, data: data};
-            units.push(unit);
+            units.push(unit);//不停插入
             length += data.byteLength;
 
             offset += lengthSize + naluSize;
@@ -1091,7 +1091,7 @@ class FLVDemuxer {
             if (keyframe) {
                 avcSample.fileposition = tagPosition;
             }
-            track.samples.push(avcSample);
+            track.samples.push(avcSample);//插入_videoTrack 
             track.length += length;
         }
     }

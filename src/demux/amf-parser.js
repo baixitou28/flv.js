@@ -26,7 +26,7 @@ let le = (function () {
     return (new Int16Array(buf))[0] === 256;  // platform-spec read, if equal then LE
 })();
 
-class AMF {//解析类
+class AMF {//AMF解析类
 
     static parseScriptData(arrayBuffer, dataOffset, dataSize) {
         let data = {};
