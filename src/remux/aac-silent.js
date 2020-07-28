@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-class AAC {
+class AAC {//aac 的slient帧是这样产生的，和想象的pcm填0不一样
 
     static getSilentFrame(codec, channelCount) {
         if (codec === 'mp4a.40.2') {

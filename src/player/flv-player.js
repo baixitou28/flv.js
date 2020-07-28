@@ -208,11 +208,11 @@ class FlvPlayer {
 
         this._transmuxer = new Transmuxer(this._mediaDataSource, this._config);
 
-        this._transmuxer.on(TransmuxingEvents.INIT_SEGMENT, (type, is) => {
+        this._transmuxer.on(TransmuxingEvents.INIT_SEGMENT, (type, is) => {//注册n个事件，将Transmuxer的事件让其他部件来处理
             this._msectl.appendInitSegment(is);
         });
-        this._transmuxer.on(TransmuxingEvents.MEDIA_SEGMENT, (type, ms) => {
-            this._msectl.appendMediaSegment(ms);
+        this._transmuxer.on(TransmuxingEvents.MEDIA_SEGMENT, (type, ms) => {//TransmuxingEvents.MEDIA_SEGMENT事件处理，实际的音视频数据
+            this._msectl.appendMediaSegment(ms);//主函数，加入新的音视频数据
 
             // lazyLoad check
             if (this._config.lazyLoad && !this._config.isLive) {

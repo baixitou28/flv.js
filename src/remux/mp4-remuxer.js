@@ -25,7 +25,7 @@ import {IllegalStateException} from '../utils/exception.js';
 
 
 // Fragmented mp4 remuxer
-class MP4Remuxer {
+class MP4Remuxer {//将flv的aac和h264流重新组合成浏览器需要的格式
 
     constructor(config) {
         this.TAG = 'MP4Remuxer';
@@ -129,15 +129,15 @@ class MP4Remuxer {
         this._audioSegmentInfoList.clear();
     }
 
-    remux(audioTrack, videoTrack) {//数据入口函数
+    remux(audioTrack, videoTrack) {//数据入口函数:将flv的aac和h264流重新组合成浏览器需要的格式,最后调用onMediaSegment,生成TransmuxingEvents.MEDIA_SEGMENT事件来播放//ctl.on(TransmuxingEvents.MEDIA_SEGMENT, this._onMediaSegment.bind(this));
         if (!this._onMediaSegment) {
             throw new IllegalStateException('MP4Remuxer: onMediaSegment callback must be specificed!');
         }
         if (!this._dtsBaseInited) {
             this._calculateDtsBase(audioTrack, videoTrack);
         }
-        this._remuxVideo(videoTrack);//处理视频
-        this._remuxAudio(audioTrack);//处理音频
+        this._remuxVideo(videoTrack);//处理视频，最后调用onMediaSegment来播放
+        this._remuxAudio(audioTrack);//处理音频，最后调用onMediaSegment来播放
     }
 
     _onTrackMetadataReceived(type, metadata) {
@@ -170,7 +170,7 @@ class MP4Remuxer {
         }
         this._onInitSegment(type, {
             type: type,
-            data: metabox.buffer,
+            data: metabox.buffer,//实际生成metabox
             codec: codec,
             container: `${type}/${container}`,
             mediaDuration: metadata.duration  // in timescale 1000 (milliseconds)
@@ -230,7 +230,7 @@ class MP4Remuxer {
         this._remuxAudio(audioTrack, true);
     }
 
-    _remuxAudio(audioTrack, force) {
+    _remuxAudio(audioTrack, force) {//处理音频，最后调用onMediaSegment来播放-->_onMediaSegment()
         if (this._audioMeta == null) {
             return;
         }
@@ -249,7 +249,7 @@ class MP4Remuxer {
         if (!samples || samples.length === 0) {
             return;
         }
-        if (samples.length === 1 && !force) {
+        if (samples.length === 1 && !force) {//01.tiger 为什么一个的不处理？
             // If [sample count in current batch] === 1 && (force != true)
             // Ignore and keep in demuxer's queue
             return;
@@ -260,7 +260,7 @@ class MP4Remuxer {
         let mdatBytes = 0;
 
         // calculate initial mdat size
-        if (mpegRawTrack) {
+        if (mpegRawTrack) {//02. 计算长度
             // for raw mpeg buffer
             offset = 0;
             mdatBytes = track.length;
@@ -275,8 +275,8 @@ class MP4Remuxer {
 
         // Pop the lastSample and waiting for stash
         if (samples.length > 1) {
-            lastSample = samples.pop();
-            mdatBytes -= lastSample.length;
+            lastSample = samples.pop();//03.取一个
+            mdatBytes -= lastSample.length;//减去长度
         }
 
         // Insert [stashed lastSample in the previous batch] to the front
@@ -296,7 +296,7 @@ class MP4Remuxer {
         let firstSampleOriginalDts = samples[0].dts - this._dtsBase;
 
         // calculate dtsCorrection
-        if (this._audioNextDts) {
+        if (this._audioNextDts) {//04. DTS
             dtsCorrection = firstSampleOriginalDts - this._audioNextDts;
         } else {  // this._audioNextDts == undefined
             if (this._audioSegmentInfoList.isEmpty()) {
@@ -321,7 +321,7 @@ class MP4Remuxer {
             }
         }
 
-        if (insertPrefixSilentFrame) {
+        if (insertPrefixSilentFrame) {//05.是否能插入静音帧
             // align audio segment beginDts to match with current video segment's beginDts
             let firstSampleDts = firstSampleOriginalDts - dtsCorrection;
             let videoSegment = this._videoSegmentInfoList.getLastSegmentBefore(firstSampleOriginalDts);
@@ -331,7 +331,7 @@ class MP4Remuxer {
                     let dts = videoSegment.beginDts;
                     let silentFrameDuration = firstSampleDts - videoSegment.beginDts;
                     Log.v(this.TAG, `InsertPrefixSilentAudio: dts: ${dts}, duration: ${silentFrameDuration}`);
-                    samples.unshift({unit: silentUnit, dts: dts, pts: dts});
+                    samples.unshift({ unit: silentUnit, dts: dts, pts: dts });//加入silentUnit
                     mdatBytes += silentUnit.byteLength;
                 }  // silentUnit == null: Cannot generate, skip
             } else {
@@ -432,7 +432,7 @@ class MP4Remuxer {
                 sampleDuration = Math.round(refSampleDuration);
             }
 
-            mp4Samples.push({
+            mp4Samples.push({//推入
                 dts: dts,
                 pts: dts,
                 cts: 0,
@@ -450,7 +450,7 @@ class MP4Remuxer {
 
             if (needFillSilentFrames) {
                 // Silent frames should be inserted after wrong-duration frame
-                mp4Samples.push.apply(mp4Samples, silentFrames);
+                mp4Samples.push.apply(mp4Samples, silentFrames);//加入静音
             }
         }
 
@@ -519,7 +519,7 @@ class MP4Remuxer {
         track.samples = [];
         track.length = 0;
 
-        let segment = {
+        let segment = {//生成一个segment
             type: 'audio',
             data: this._mergeBoxes(moofbox, mdatbox).buffer,
             sampleCount: mp4Samples.length,
@@ -532,7 +532,7 @@ class MP4Remuxer {
             segment.timestampOffset = firstDts;
         }
 
-        this._onMediaSegment('audio', segment);
+        this._onMediaSegment('audio', segment);//调用onMediaSegment
     }
 
     _remuxVideo(videoTrack, force) {

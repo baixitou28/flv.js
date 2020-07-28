@@ -50,7 +50,7 @@ let TransmuxingWorker = function (self) {//重新封装TransmuxingController，以后可
                 controller.on(TransmuxingEvents.IO_ERROR, onIOError.bind(this));
                 controller.on(TransmuxingEvents.DEMUX_ERROR, onDemuxError.bind(this));
                 controller.on(TransmuxingEvents.INIT_SEGMENT, onInitSegment.bind(this));
-                controller.on(TransmuxingEvents.MEDIA_SEGMENT, onMediaSegment.bind(this));
+                controller.on(TransmuxingEvents.MEDIA_SEGMENT, onMediaSegment.bind(this));//如果是work，采用onMediaSegment
                 controller.on(TransmuxingEvents.LOADING_COMPLETE, onLoadingComplete.bind(this));
                 controller.on(TransmuxingEvents.RECOVERED_EARLY_EOF, onRecoveredEarlyEof.bind(this));
                 controller.on(TransmuxingEvents.MEDIA_INFO, onMediaInfo.bind(this));

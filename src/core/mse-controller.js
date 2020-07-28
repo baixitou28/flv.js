@@ -222,9 +222,9 @@ class MSEController {
         }
     }
 
-    appendMediaSegment(mediaSegment) {
+    appendMediaSegment(mediaSegment) {//追加音视频数据
         let ms = mediaSegment;
-        this._pendingSegments[ms.type].push(ms);
+        this._pendingSegments[ms.type].push(ms);//各种类型数据
 
         if (this._config.autoCleanupSourceBuffer && this._needCleanupSourceBuffer()) {
             this._doCleanupSourceBuffer();
@@ -442,10 +442,10 @@ class MSEController {
                 }
 
                 try {
-                    this._sourceBuffers[type].appendBuffer(segment.data);
+                    this._sourceBuffers[type].appendBuffer(segment.data);//不同类型type，放入新的数据
                     this._isBufferFull = false;
                     if (type === 'video' && segment.hasOwnProperty('info')) {
-                        this._idrList.appendArray(segment.info.syncPoints);
+                        this._idrList.appendArray(segment.info.syncPoints);//
                     }
                 } catch (error) {
                     this._pendingSegments[type].unshift(segment);

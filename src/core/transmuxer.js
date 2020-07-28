@@ -56,7 +56,7 @@ class Transmuxer {
             ctl.on(TransmuxingEvents.IO_ERROR, this._onIOError.bind(this));
             ctl.on(TransmuxingEvents.DEMUX_ERROR, this._onDemuxError.bind(this));
             ctl.on(TransmuxingEvents.INIT_SEGMENT, this._onInitSegment.bind(this));
-            ctl.on(TransmuxingEvents.MEDIA_SEGMENT, this._onMediaSegment.bind(this));
+            ctl.on(TransmuxingEvents.MEDIA_SEGMENT, this._onMediaSegment.bind(this));//tiger _onMediaSegment 直接生成TransmuxingEvents.MEDIA_SEGMENT事件
             ctl.on(TransmuxingEvents.LOADING_COMPLETE, this._onLoadingComplete.bind(this));
             ctl.on(TransmuxingEvents.RECOVERED_EARLY_EOF, this._onRecoveredEarlyEof.bind(this));
             ctl.on(TransmuxingEvents.MEDIA_INFO, this._onMediaInfo.bind(this));
@@ -142,9 +142,9 @@ class Transmuxer {
         });
     }
 
-    _onMediaSegment(type, mediaSegment) {
+    _onMediaSegment(type, mediaSegment) {//直接产生TransmuxingEvents.MEDIA_SEGMENT事件，最后实际是flv-player处理
         Promise.resolve().then(() => {
-            this._emitter.emit(TransmuxingEvents.MEDIA_SEGMENT, type, mediaSegment);
+            this._emitter.emit(TransmuxingEvents.MEDIA_SEGMENT, type, mediaSegment);//tiger _onMediaSegment转化成浏览器事件EventEmitter的TransmuxingEvents.MEDIA_SEGMENT，以便浏览器所有相关捕捉
         });
     }
 
