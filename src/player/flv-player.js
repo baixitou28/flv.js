@@ -140,7 +140,7 @@ class FlvPlayer {
 
         this._msectl.on(MSEEvents.UPDATE_END, this._onmseUpdateEnd.bind(this));
         this._msectl.on(MSEEvents.BUFFER_FULL, this._onmseBufferFull.bind(this));
-        this._msectl.on(MSEEvents.SOURCE_OPEN, () => {//SOURCE_OPEN 数据加载完成
+        this._msectl.on(MSEEvents.SOURCE_OPEN, () => {//SOURCE_OPEN 
             this._mseSourceOpened = true;
             if (this._hasPendingLoad) {
                 this._hasPendingLoad = false;

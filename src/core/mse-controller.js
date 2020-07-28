@@ -166,15 +166,15 @@ class MSEController {
     }
 
     appendInitSegment(initSegment, deferred) {
-        if (!this._mediaSource || this._mediaSource.readyState !== 'open') {
+        if (!this._mediaSource || this._mediaSource.readyState !== 'open') {//01.MediaSource 还未创建，数据暂存在_pendingSourceBufferInit
             // sourcebuffer creation requires mediaSource.readyState === 'open'
             // so we defer the sourcebuffer creation, until sourceopen event triggered
-            this._pendingSourceBufferInit.push(initSegment);
+            this._pendingSourceBufferInit.push(initSegment);//先把segment放这里
             // make sure that this InitSegment is in the front of pending segments queue
             this._pendingSegments[initSegment.type].push(initSegment);
             return;
         }
-
+        //02. MediaSource 已经创建好了
         let is = initSegment;
         let mimeType = `${is.container}`;
         if (is.codec && is.codec.length > 0) {
@@ -186,14 +186,14 @@ class MSEController {
         Log.v(this.TAG, 'Received Initialization Segment, mimeType: ' + mimeType);
         this._lastInitSegments[is.type] = is;
 
-        if (mimeType !== this._mimeTypes[is.type]) {
+        if (mimeType !== this._mimeTypes[is.type]) {//如果最后收到的mime类型和缓存的不同
             if (!this._mimeTypes[is.type]) {  // empty, first chance create sourcebuffer
-                firstInitSegment = true;
+                firstInitSegment = true;//如果原来没有
                 try {
-                    let sb = this._sourceBuffers[is.type] = this._mediaSource.addSourceBuffer(mimeType);
-                    sb.addEventListener('error', this.e.onSourceBufferError);
+                    let sb = this._sourceBuffers[is.type] = this._mediaSource.addSourceBuffer(mimeType);//tiger 关键语句 mediaSource 中加入SourceBuffer
+                    sb.addEventListener('error', this.e.onSourceBufferError);//source buffer的事件
                     sb.addEventListener('updateend', this.e.onSourceBufferUpdateEnd);
-                } catch (error) {
+                } catch (error) {//手册：InvalidAccessError InvalidStateError NotSupportedError QuotaExceededError
                     Log.e(this.TAG, error.message);
                     this._emitter.emit(MSEEvents.ERROR, {code: error.code, msg: error.message});
                     return;
@@ -201,7 +201,7 @@ class MSEController {
             } else {
                 Log.v(this.TAG, `Notice: ${is.type} mimeType changed, origin: ${this._mimeTypes[is.type]}, target: ${mimeType}`);
             }
-            this._mimeTypes[is.type] = mimeType;
+            this._mimeTypes[is.type] = mimeType;//更新
         }
 
         if (!deferred) {
