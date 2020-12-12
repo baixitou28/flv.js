@@ -115,7 +115,7 @@ class MSStreamLoader extends BaseLoader {
 
         let seekConfig = this._seekHandler.getConfig(sourceURL, range);
         this._currentRequestURL = seekConfig.url;
-
+        //tiger 重要 实际入口
         let reader = this._reader = new self.MSStreamReader();
         reader.onprogress = this._msrOnProgress.bind(this);
         reader.onload = this._msrOnLoad.bind(this);
